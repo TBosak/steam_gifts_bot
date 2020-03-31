@@ -23,6 +23,17 @@ if os.path.exists('./settings.cfg'):
 else:
     additional_path_for_conf = "/etc/steam_gifts/"
 
+def get_wanted_games():
+    doc = requests.get("http://store.steampowered.com/api/featuredcategories/?cc=US")
+    wantedgames = []
+    topsellers = doc.json()["top_sellers"]["items"]
+    newgames = doc.json()["new_releases"]["items"]
+    for val in topsellers:
+        wantedgames.append(val["name"])
+    for val in newgames:
+        wantedgames.append(val["name"])
+    wantedgames = list(set(wantedgames))
+    return wantedgames
 
 def check_new_version(ver):
     """Function for check new version of this script"""
@@ -67,7 +78,7 @@ def get_requests(cookie, req_type, headers):
     if req_type == "wishlist" or req_type=="group":
         do_requests(cookie, headers, end_link=f"&type={req_type}")
     elif req_type == "search_list":
-        for current_search in what_search:
+        for current_search in get_wanted_games():
             print(f"Search giveaways which contain: {current_search}")
             do_requests(cookie, headers, end_link=f"&q={current_search}")
             time.sleep(random.randint(8, 39))
@@ -93,10 +104,10 @@ def get_requests(cookie, req_type, headers):
                     else:
                         return entered_list
                 page_number += 1
-                time.sleep(random.randint(3, 7))
+                time.sleep(random.randint(1, 3))
             except Exception as e:
                 print(f"Can not get entered list due to exception: {e}")
-                time.sleep(300)
+                time.sleep(5)
                 return entered_list
 
 
@@ -127,11 +138,11 @@ def enter_geaway(geaway_link):
         r = requests.get(geaway_link, cookies=cookie, headers=headers)
         if r.status_code != 200:
             set_notify("Site error", f"Error code: {r.status_code}", separator=". ")
-            time.sleep(300)
+            time.sleep(5)
             return False
     except:
         print("Site is not available...")
-        time.sleep(300)
+        time.sleep(5)
         return False
     soup_enter = BeautifulSoup(r.text, "html.parser")
     for bad_word in forbidden_words:
@@ -167,12 +178,12 @@ def enter_geaway(geaway_link):
             extract_coins = json.loads(r.text)
         except:
             print("Site is not available...")
-            time.sleep(300)
+            time.sleep(5)
             return False
         if extract_coins["type"] == "success":
             coins = extract_coins["points"]
             set_notify("Bot entered to giveaway with game: ", re.sub("&", '', game) + f". Coins left: {coins}", separator="")
-            time.sleep(random.randint(1, 120))
+            time.sleep(random.randint(1, 3))
             return False
         elif extract_coins["msg"] == "Not Enough Points":
             coins = get_coins()
@@ -185,7 +196,7 @@ def enter_geaway(geaway_link):
         link = soup_enter.find(class_="sidebar__error is-disabled")
         if link != None and link.get_text() == " Not Enough Points":
             print(f"Not enough points to enter to {geaway_link}")
-            time.sleep(random.randint(5, 60))
+            time.sleep(random.randint(1, 3))
             if get_coins() < 10:
                 i_want_to_sleep = True
                 return True
@@ -193,7 +204,7 @@ def enter_geaway(geaway_link):
             link = soup_enter.select("div.featured__column span")
             if link != None:
                 print(f"Giveaway was ended. Bot has late to enter giveaway: {geaway_link}. Was ended: {link[0].text}")
-                time.sleep(random.randint(5, 60))
+                time.sleep(random.randint(1, 3))
                 return False
             else:
                 set_notify("Critical error!", f"Link: {link}", separator="")
@@ -210,7 +221,7 @@ def get_coins():
         return coins
     except Exception as e:
         print(f"Can not get cookies count... Exception: {e}")
-        time.sleep(300)
+        time.sleep(5)
         return 0
 
 
@@ -292,7 +303,6 @@ def get_games_from_banners():
 
 
 print("I have started...\nHave a nice day!")
-time.sleep(60)
 func_list = []
 
 #let's check is new version available
@@ -336,12 +346,12 @@ except:
     sys.exit(1)
 
 #read various variables from files
-with open(additional_path_for_conf + "search.txt") as f: what_search = f.read().splitlines()
+# with open(additional_path_for_conf + "search.txt") as f: what_search = f.read().splitlines()
 with open(additional_path_for_conf + "black_list_games_name.txt") as f: bad_games_name = f.read().splitlines()
 with open("bad_giveaways_link.txt") as f: bad_giveaways_link = f.read().splitlines()
 
 #sleep and get currnt count of coins
-time.sleep(random.randint(2, 10))
+time.sleep(random.randint(1, 3))
 coins = get_coins()
 
 entered_url = get_requests(cookie, "enteredlist", headers)
